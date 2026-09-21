@@ -3,7 +3,7 @@
 	"name": "Screvi Sync",
 	"version": "1.0.5",
 	"minAppVersion": "1.10.3",
-	"description": "Import highlights and sources from Screvi.",
+	"description": "Sync your Kindle, Kobo, Apple Books and Readwise highlights from Screvi into your vault.",
 	"author": "Screvi Team",
 	"authorUrl": "https://screvi.com",
 	"isDesktopOnly": false

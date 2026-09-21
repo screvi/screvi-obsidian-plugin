@@ -1,6 +1,6 @@
 # Screvi Sync
 
-This official plugin maintained by the Screvi team enables you to easily and automatically export all your highlights from [Screvi](https://screvi.com/) to Obsidian.
+Sync your Screvi highlights into Obsidian. Whatever you have collected in [Screvi](https://screvi.com/), from Kindle, Kobo, Apple Books, Readwise and the web, lands in your vault as markdown, organized by source.
 
 ## Features
 
@@ -11,7 +11,7 @@ This official plugin maintained by the Screvi team enables you to easily and aut
 
 ## Installation
 
-Once approved on the [Obsidian community plugin store](https://obsidian.md/plugins):
+From the [Obsidian community plugin store](https://obsidian.md/plugins):
 
 1. Open Obsidian Settings
 2. Go to Community Plugins
@@ -20,7 +20,7 @@ Once approved on the [Obsidian community plugin store](https://obsidian.md/plugi
 
 ### Manual installation
 
-Until the plugin lands in the community store, install it directly from a GitHub release:
+You can also install straight from a GitHub release:
 
 1. Download both files from the [latest release](https://github.com/pedroaraujo74/screvi-obsidian-plugin/releases/latest):
    - `main.js`
