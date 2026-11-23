@@ -1,7 +1,7 @@
 {
 	"id": "screvi",
 	"name": "Screvi Sync",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"minAppVersion": "1.10.3",
 	"description": "Sync your Kindle, Kobo, Apple Books and Readwise highlights from Screvi into your vault.",
 	"author": "Screvi Team",
