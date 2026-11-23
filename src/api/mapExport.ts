@@ -19,6 +19,14 @@ function realUrl(value: unknown): string | undefined {
 	return url && !PLACEHOLDER_URLS.has(url) ? url : undefined;
 }
 
+/** A page, with a one-page range such as "12-12" written as "12". */
+function page(value: unknown): string | undefined {
+	const raw = text(value);
+	if (!raw) return undefined;
+	const range = raw.match(/^(\d+)\s*-\s*(\d+)$/);
+	return range && range[1] === range[2] ? range[1] : raw;
+}
+
 function normalizeTags(raw: unknown): HighlightTag[] | undefined {
 	if (!Array.isArray(raw)) return undefined;
 	return raw.map((tag: unknown) => {
@@ -70,7 +78,7 @@ export function mapExportSources(sources: unknown[]): ScreviHighlight[] {
 				updated_at: h.updated_at as string | undefined,
 				tags: normalizeTags(h.tags),
 				chapter: text(h.chapter) ?? text(metadata?.chapter),
-				page: text(h.page) ?? text(metadata?.page) ?? text(metadata?.page_number),
+				page: page(h.page) ?? page(metadata?.page) ?? page(metadata?.page_number),
 				location: location === '0' ? undefined : location,
 				color: h.color as string | undefined,
 				book_id: h.book_id as string | undefined,

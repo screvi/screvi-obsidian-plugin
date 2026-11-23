@@ -403,12 +403,7 @@ export default class ScreviSyncPlugin extends Plugin {
 		let newContent = existingContent;
 
 		for (const highlight of sourceHighlights) {
-			// Prefer id-based detection when present; otherwise match on content body.
-			const isDuplicate = highlight.id
-				? existingContent.includes(`<!-- screvi-id:${highlight.id} -->`)
-				: existingContent.includes(highlight.content);
-
-			if (!isDuplicate) {
+			if (!this.noteHasHighlight(newContent, highlight)) {
 				const rendered = this.renderTemplate(HIGHLIGHT_TEMPLATE, { highlight });
 				const idMarker = highlight.id ? `<!-- screvi-id:${highlight.id} -->\n` : '';
 				newContent += `\n${idMarker}${rendered}`;
@@ -418,6 +413,22 @@ export default class ScreviSyncPlugin extends Plugin {
 		if (newContent !== existingContent) {
 			await this.app.vault.modify(file, newContent);
 		}
+	}
+
+	/**
+	 * Whether a note already holds a highlight: by its id marker, or, failing
+	 * that, by its quoted text. The text check matters for notes written before
+	 * 1.0.6, whose first batch of highlights carries no marker: without it a
+	 * full sync wrote every one of those a second time.
+	 */
+	noteHasHighlight(noteContent: string, highlight: ScreviHighlight): boolean {
+		if (highlight.id && noteContent.includes(`<!-- screvi-id:${highlight.id} -->`)) return true;
+		const quoted = this.formatAsBlockquote(decodeHtmlEntities(highlight.content || ''));
+		if (!quoted) return false;
+		// The whole quote, starting at the beginning of a line and ending at the
+		// end of one, so a short highlight is not "found" inside a longer one.
+		const at = `\n${noteContent}\n`.indexOf(`\n${quoted}\n`);
+		return at !== -1;
 	}
 
 	groupHighlightsBySource(highlights: ScreviHighlight[]): Record<string, ScreviHighlight[]> {
@@ -471,12 +482,31 @@ export default class ScreviSyncPlugin extends Plugin {
 	sanitizeFileName(name: string): string {
 		// Only remove characters that are actually problematic for file systems
 		// Keep spaces, letters, numbers, common punctuation
-		return name
+		const cleaned = name
+			// eslint-disable-next-line no-control-regex -- line breaks and tabs do occur in saved titles
+			.replace(/[\u0000-\u001f\u007f]+/g, ' ')  // Control characters, line breaks included
 			.replace(/[<>:"|?*]/g, '')      // Remove Windows forbidden characters
 			.replace(/[/\\]/g, '-')        // Replace path separators with hyphens
-			.trim()                         // Trim before stripping trailing dots
+			.trim()                         // Trim before stripping dots
+			.replace(/^\.+/, '')            // A leading dot hides the note from Obsidian
 			.replace(/\.+$/g, '')           // Remove trailing dots (Windows issue)
 			.trim();                        // Final trim in case dots exposed whitespace
+
+		// A file name may be 255 bytes on most disks, ".md" included. Titles
+		// saved from the web run to thousands; one such note used to fail the
+		// whole sync. Cut on a character boundary, never inside one.
+		const MAX_BYTES = 200;
+		const encoder = new TextEncoder();
+		if (encoder.encode(cleaned).length <= MAX_BYTES) return cleaned;
+		let kept = '';
+		let bytes = 0;
+		for (const char of cleaned) {
+			const size = encoder.encode(char).length;
+			if (bytes + size > MAX_BYTES) break;
+			kept += char;
+			bytes += size;
+		}
+		return kept.replace(/\.+$/g, '').trim();
 	}
 
 	setupNunjucks() {

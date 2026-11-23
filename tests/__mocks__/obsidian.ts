@@ -87,5 +87,13 @@ export class Notice {
 	constructor(_: string, __?: number) {}
 }
 
-export class TFile {}
+export class TFile {
+	path = '';
+	name = '';
+}
+export class TFolder {
+	path = '';
+	name = '';
+	children: (TFile | TFolder)[] = [];
+}
 export class App {}

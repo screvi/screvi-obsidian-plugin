@@ -48,6 +48,12 @@ describe('mapExportSources', () => {
 		expect(b.page).toBe('xii');
 	});
 
+	it('writes a one-page range as a single page and keeps a real range', () => {
+		const [same, range] = mapExportSources([exportSource({}, [{ metadata: { page: '12-12' } }, { metadata: { page: '108-112' } }])]);
+		expect(same.page).toBe('12');
+		expect(range.page).toBe('108-112');
+	});
+
 	it('treats location "0" as no location and keeps a real one', () => {
 		const [none, real] = mapExportSources([exportSource({}, [{ location: '0' }, { location: '1509' }])]);
 		expect(none.location).toBeUndefined();

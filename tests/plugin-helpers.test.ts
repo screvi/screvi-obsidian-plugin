@@ -55,6 +55,33 @@ describe('sanitizeFileName', () => {
 	it('preserves spaces and unicode', () => {
 		expect(plugin.sanitizeFileName("L'Étranger – Camus")).toBe("L'Étranger – Camus");
 	});
+
+	it('turns line breaks and tabs into spaces', () => {
+		expect(plugin.sanitizeFileName('First line\nsecond\tpart')).toBe('First line second part');
+	});
+
+	it('drops leading dots, which would hide the note from Obsidian', () => {
+		expect(plugin.sanitizeFileName('...and then there were none')).toBe('and then there were none');
+	});
+
+	it('leaves a name of ordinary length untouched', () => {
+		const name = 'A'.repeat(200);
+		expect(plugin.sanitizeFileName(name)).toBe(name);
+	});
+
+	it('cuts a very long title to fit a file name', () => {
+		const out = plugin.sanitizeFileName('word '.repeat(1200));
+		expect(new TextEncoder().encode(out).length).toBeLessThanOrEqual(200);
+		expect(out.startsWith('word word')).toBe(true);
+		expect(out).toBe(out.trim());
+	});
+
+	it('never cuts inside a multi-byte character', () => {
+		const out = plugin.sanitizeFileName('é'.repeat(300) + '😀'.repeat(50));
+		expect(new TextEncoder().encode(out).length).toBeLessThanOrEqual(200);
+		expect(out).toBe('é'.repeat(100));
+		expect(plugin.sanitizeFileName('😀'.repeat(80))).toBe('😀'.repeat(50));
+	});
 });
 
 describe('sanitizeTagName', () => {
