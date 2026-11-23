@@ -2,6 +2,7 @@ import { App, Notice, Plugin, PluginSettingTab, Setting, TFile, TFolder, normali
 import { ScreviApiClient, ScreviHighlight, SyncCategory, SYNC_CATEGORIES, API_BASE_URL } from './src/api';
 import { categorize, categoryFolderName, categoryLabel } from './src/categorize';
 import { decodeHtmlEntities } from './src/utils';
+import { buildFrontmatter, screviSourceUrl } from './src/frontmatter';
 import * as nunjucks from 'nunjucks';
 
 const CACHE_FILE = 'screvi-cache.json';
@@ -54,6 +55,8 @@ const HIGHLIGHT_TEMPLATE = `{{highlight.content | blockquote}}
 {%- endif %}
 {%- if highlight.page %}
 **Page:** {{highlight.page}}
+{%- elif highlight.sourceType == 'book' and highlight.location %}
+**Location:** {{highlight.location}}
 {%- endif %}
 {%- if highlight.tags %}
 {% for tag in highlight.tags %}#{{tag.name}}{% if not loop.last %}, {% endif %}{% endfor %}
@@ -62,13 +65,18 @@ const HIGHLIGHT_TEMPLATE = `{{highlight.content | blockquote}}
 ---
 `;
 
-const BOOK_TEMPLATE = `**Author:** {{author}}
-{% if url %}**URL:** [{{title}}]({{url}}){% endif %}
-
+// Every highlight carries its id marker, here as in appendHighlightsToFile, so
+// a later full sync recognises what the file already holds instead of adding
+// it a second time. Location is a Kindle position: only books have one worth
+// showing (an article's is a character offset), and only when no page is known.
+const BOOK_TEMPLATE = `{% if author %}**Author:** {{author}}
+{% endif %}{% if url %}**URL:** [{{title}}]({{url}})
+{% endif %}
 ## Highlights
 
 {% for highlight in highlights %}
-{{highlight.content | blockquote}}
+{%- if highlight.id %}<!-- screvi-id:{{highlight.id}} -->
+{% endif %}{{highlight.content | blockquote}}
 {%- if highlight.note %}
 
 **Note:** {{highlight.note}}
@@ -78,6 +86,8 @@ const BOOK_TEMPLATE = `**Author:** {{author}}
 {%- endif %}
 {%- if highlight.page %}
 **Page:** {{highlight.page}}
+{%- elif highlight.sourceType == 'book' and highlight.location %}
+**Location:** {{highlight.location}}
 {%- endif %}
 {%- if highlight.tags %}
 {% for tag in highlight.tags %}#{{tag.name}}{% if not loop.last %}, {% endif %}{% endfor %}
@@ -319,13 +329,7 @@ export default class ScreviSyncPlugin extends Plugin {
 				continue;
 			}
 
-			const templateData = {
-				title: source,
-				author: sourceHighlights[0]?.author || '',
-				url: sourceHighlights[0]?.url || '',
-				highlights: sourceHighlights
-			};
-			const content = this.renderTemplate(BOOK_TEMPLATE, templateData);
+			const content = this.renderSourceNote(source, sourceHighlights);
 
 			try {
 				await this.app.vault.create(filePath, content);
@@ -345,6 +349,39 @@ export default class ScreviSyncPlugin extends Plugin {
 				}
 			}
 		}
+	}
+
+	/**
+	 * The full text of a new note for one source: a properties block, then the
+	 * header and every highlight.
+	 */
+	renderSourceNote(source: string, sourceHighlights: ScreviHighlight[]): string {
+		const first = sourceHighlights[0];
+		const author = (first?.author || '').trim();
+		// The source's own link. A highlight's link is a fallback only: for a
+		// Readwise import it points at Readwise Reader, not at the article.
+		const url = first?.source_url || first?.url || '';
+
+		const linkAuthor = this.settings.enableAutoLinking
+			&& this.settings.autoLinkFields.includes('author')
+			&& author !== '' && !author.startsWith('[[');
+
+		const frontmatter = buildFrontmatter({
+			title: source,
+			author: linkAuthor ? `[[${author}]]` : author,
+			type: first?.sourceType,
+			source: url,
+			screvi: first ? screviSourceUrl(first) : undefined,
+		});
+
+		const body = this.renderTemplate(BOOK_TEMPLATE, {
+			title: source,
+			author,
+			url,
+			highlights: sourceHighlights,
+		});
+
+		return frontmatter + body;
 	}
 
 	private findFileCaseInsensitive(folderPath: string, fileName: string): TFile | null {
@@ -443,8 +480,10 @@ export default class ScreviSyncPlugin extends Plugin {
 	}
 
 	setupNunjucks() {
-		// Create a new Nunjucks environment
-		this.nunjucksEnv = new nunjucks.Environment();
+		// The output is Markdown, not HTML, so nothing is HTML-escaped. With
+		// escaping on, an apostrophe in a note came out as &#39; and an author
+		// such as O'Brien was linked as [[O&#39;Brien]], a different note.
+		this.nunjucksEnv = new nunjucks.Environment(null, { autoescape: false });
 		
 		// Add custom filters
 		this.nunjucksEnv.addFilter('link', (str: string) => {

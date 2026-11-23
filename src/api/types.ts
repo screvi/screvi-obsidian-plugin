@@ -20,13 +20,18 @@ export interface ScreviHighlight {
 	sourceType?: SourceType;
 	title?: string;
 	author?: string;
+	// The link of this one highlight. For a Readwise import that is the
+	// Readwise Reader page, not the article: see source_url.
 	url?: string;
+	// The link of the book or article the highlight belongs to.
+	source_url?: string;
 	date: string;
 	created_at?: string;
 	updated_at?: string;
 	tags?: HighlightTag[];
 	chapter?: string;
-	page?: number;
+	// Sent inside highlight.metadata by the API, and as text ("120", "xii").
+	page?: string;
 	location?: string;
 	color?: string;
 	book_id?: string;

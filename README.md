@@ -7,6 +7,10 @@ Sync your Screvi highlights into Obsidian. Whatever you have collected in [Screv
 - **Automatic Sync**: Automatically sync your highlights at regular intervals
 - **Manual Sync**: Sync on-demand with a single click
 - **Organized by Source**: Highlights are automatically organized by source type (books, articles, tweets, etc.)
+- **Properties on every note**: Each note starts with a properties block (`title`, `author`, `type`, `source`, and a `screvi` link back to the source), so Properties, Dataview and Bases can use it. The author is a link when author auto-linking is on.
+- **Page and location**: Each highlight shows its page number, or its Kindle location when there is no page.
+
+Notes created by version 1.0.5 or earlier keep their old format. To get the new one for everything, delete the Screvi folder in your vault and run **Full sync** from the plugin settings. Text you typed into those notes inside Obsidian is not restored by a sync.
 
 
 ## Installation

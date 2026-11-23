@@ -1,6 +1,6 @@
 import { requestUrl } from 'obsidian';
-import { ScreviHighlight, HighlightTag, API_BASE_URL } from './types';
-import { decodeHtmlEntities } from '../utils';
+import { ScreviHighlight, API_BASE_URL } from './types';
+import { mapExportSources } from './mapExport';
 
 export class ScreviApiClient {
 	private apiKey: string;
@@ -98,58 +98,7 @@ export class ScreviApiClient {
 			currentPage++;
 		}
 
-		// Flatten all highlights from all sources
-		const allHighlights: ScreviHighlight[] = [];
-		for (const source of allSources) {
-			const sourceObj = source as { highlights?: unknown[]; name?: string; type?: string; author?: string; url?: string; created_at?: string; source_id?: string | null; article_id?: string | null };
-			if (sourceObj.highlights && Array.isArray(sourceObj.highlights)) {
-				for (const highlight of sourceObj.highlights) {
-					const highlightObj = highlight as Record<string, unknown>;
-					
-					// Normalize tags to HighlightTag[] format
-					let tags: HighlightTag[] | undefined;
-					if (Array.isArray(highlightObj.tags)) {
-						tags = highlightObj.tags.map((tag: unknown) => {
-							if (typeof tag === 'string') {
-								return { name: tag };
-							}
-							if (tag && typeof tag === 'object' && 'name' in tag) {
-								return tag as HighlightTag;
-							}
-							return { name: String(tag) };
-						});
-					}
-
-					// Create a properly mapped highlight based on actual database schema
-					const mappedHighlight: ScreviHighlight = {
-						id: highlightObj.id as string | undefined,
-						content: decodeHtmlEntities(highlightObj.content as string || ''),
-						note: (highlightObj.note ?? highlightObj.notes) as string | undefined,
-						source: sourceObj.name,
-						sourceType: sourceObj.type as ScreviHighlight['sourceType'],
-						title: decodeHtmlEntities(sourceObj.name || ''),
-						author: (highlightObj.author || sourceObj.author) as string | undefined,
-						url: (highlightObj.url || sourceObj.url) as string | undefined,
-						date: (highlightObj.created_at || sourceObj.created_at) as string || '',
-						created_at: (highlightObj.created_at || sourceObj.created_at) as string | undefined,
-						updated_at: highlightObj.updated_at as string | undefined,
-						tags,
-						chapter: highlightObj.chapter as string | undefined,
-						page: highlightObj.page as number | undefined,
-						location: highlightObj.location as string | undefined,
-						color: highlightObj.color as string | undefined,
-						book_id: highlightObj.book_id as string | undefined,
-						metadata: highlightObj.metadata as Record<string, unknown> | undefined,
-						source_id: sourceObj.source_id ?? null,
-						article_id: sourceObj.article_id ?? null
-					};
-					
-					allHighlights.push(mappedHighlight);
-				}
-			}
-		}
-
-		return allHighlights;
+		return mapExportSources(allSources);
 	}
 
 	updateCredentials(apiKey: string, apiUrl: string = API_BASE_URL) {
