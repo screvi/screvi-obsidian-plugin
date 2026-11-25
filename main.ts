@@ -1,7 +1,7 @@
 import { App, Notice, Plugin, PluginSettingTab, Setting, TFile, TFolder, normalizePath } from 'obsidian';
 import { ScreviApiClient, ScreviHighlight, SyncCategory, SYNC_CATEGORIES, API_BASE_URL } from './src/api';
 import { categorize, categoryFolderName, categoryLabel } from './src/categorize';
-import { decodeHtmlEntities } from './src/utils';
+import { decodeHtmlEntities, formatObsidianTags } from './src/utils';
 import { buildFrontmatter, screviSourceUrl } from './src/frontmatter';
 import * as nunjucks from 'nunjucks';
 
@@ -58,8 +58,8 @@ const HIGHLIGHT_TEMPLATE = `{{highlight.content | blockquote}}
 {%- elif highlight.sourceType == 'book' and highlight.location %}
 **Location:** {{highlight.location}}
 {%- endif %}
-{%- if highlight.tags %}
-{% for tag in highlight.tags %}#{{tag.name}}{% if not loop.last %}, {% endif %}{% endfor %}
+{%- if highlight.tags | obsidian_tags %}
+{{ highlight.tags | obsidian_tags }}
 {%- endif %}
 
 ---
@@ -89,8 +89,8 @@ const BOOK_TEMPLATE = `{% if author %}**Author:** {{author}}
 {%- elif highlight.sourceType == 'book' and highlight.location %}
 **Location:** {{highlight.location}}
 {%- endif %}
-{%- if highlight.tags %}
-{% for tag in highlight.tags %}#{{tag.name}}{% if not loop.last %}, {% endif %}{% endfor %}
+{%- if highlight.tags | obsidian_tags %}
+{{ highlight.tags | obsidian_tags }}
 {%- endif %}
 
 ---
@@ -530,6 +530,9 @@ export default class ScreviSyncPlugin extends Plugin {
 			return str;
 		});
 		
+		// A highlight's tags as one line of tags Obsidian reads whole.
+		this.nunjucksEnv.addFilter('obsidian_tags', (tags: unknown) => formatObsidianTags(tags));
+
 		this.nunjucksEnv.addFilter('sanitize_tag', (str: string) => {
 			return this.sanitizeTagName(str);
 		});

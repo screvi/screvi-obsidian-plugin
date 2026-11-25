@@ -52,3 +52,43 @@ export function decodeHtmlEntities(text: string): string {
 
 	return decoded;
 }
+
+/**
+ * A Screvi tag name as a tag Obsidian will read whole. Obsidian ends a tag at
+ * the first space or punctuation mark, so "org mod" written as #org mod is the
+ * tag #org followed by a stray word. Spaces become hyphens, characters a tag
+ * cannot hold are dropped, and letters of any language are kept, as is the
+ * case the user typed. Returns '' when nothing usable is left (a tag such as
+ * "?"), so the caller can leave it out.
+ */
+export function toObsidianTag(name: string): string {
+	if (typeof name !== 'string') return '';
+	let tag = name
+		.trim()
+		.replace(/^#+/, '')
+		.replace(/\s+/g, '-')
+		.replace(/[^\p{L}\p{N}\p{M}_\-/]/gu, '')
+		.replace(/-{2,}/g, '-')
+		.replace(/\/{2,}/g, '/')
+		.replace(/-*\/-*/g, '/')
+		.replace(/^[-/]+|[-/]+$/g, '');
+	// Obsidian does not accept a tag made of digits only.
+	if (/^\d+$/.test(tag)) tag = `_${tag}`;
+	return tag;
+}
+
+/** The tags line of a highlight: "#one, #two". '' when there is none to write. */
+export function formatObsidianTags(tags: unknown): string {
+	if (!Array.isArray(tags)) return '';
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for (const tag of tags) {
+		const raw = typeof tag === 'string' ? tag : (tag as { name?: unknown } | null)?.name;
+		const clean = toObsidianTag(typeof raw === 'string' ? raw : '');
+		const key = clean.toLowerCase();
+		if (!clean || seen.has(key)) continue;
+		seen.add(key);
+		out.push(`#${clean}`);
+	}
+	return out.join(', ');
+}
